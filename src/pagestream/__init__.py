@@ -1,18 +1,24 @@
+"""
+Base module for handling PDF pagestreams with PikePDF and splitting them
+"""
 
 from re import search
 from sys import setrecursionlimit
 from logging import info
 from typing import List
 from pathlib import Path
-from pikepdf import Pdf, Page, OutlineItem # type: ignore
+from pikepdf._qpdf import Pdf, Page
+from pikepdf.models.outlines import OutlineItem
 from itertools import tee, chain
+
+__version__ = "0.1.0"
 
 # flatten function can recurse a lot, python limits this by default to not
 # cause overflows in the CPython implementation
 setrecursionlimit(1024 * 1024)
 
 def flatten(items: List[OutlineItem]):
-    '''Recursively flatten a outline tree'''
+    """Recursively flatten a outline tree"""
     if len(items) == 0:
         return items
     if len(items[0].children) > 0:
@@ -20,7 +26,7 @@ def flatten(items: List[OutlineItem]):
     return items[:1] + flatten(items[1:])
 
 def is_valid_outlineitem(item: OutlineItem):
-    '''Check wether outline item has a page destination'''
+    """Check wether outline item has a page destination"""
     if item.action is None:
         return False
     else:
@@ -28,21 +34,18 @@ def is_valid_outlineitem(item: OutlineItem):
         # TODO - There's more valid actions than only `FitH`
         return item.action.get('/D').as_list()[1] == '/FitH'
 
-"""
-Base class for wrapping a PDF page stream with PikePDF and splitting it
-"""
 class PDFPageStream:
-    '''Represents a PDF file that consists of a stream of merged PDF documents'''
+    """Represents a PDF file that consists of a stream of merged PDF documents"""
     def __init__(self, path: Path):
         self.pdf = Pdf.open(path)
 
     def get_outline_items(self):
-        '''Get valid outlineitems (items with destination)'''
+        """Get valid outlineitems (items with destination)"""
         with self.pdf.open_outline() as outline:
             return list(filter(is_valid_outlineitem, flatten(outline.root)))
 
     def can_extract_by_outline(self):
-        '''Could this PDF document stream be seperated by PDF outline'''
+        """Could this PDF document stream be seperated by PDF outline"""
         # Some outlines are to short
         items = self.get_outline_items()
         if len(items) <= 1:
@@ -65,7 +68,7 @@ class PDFPageStream:
         return True
 
     def extract_to(self, output_path):
-        '''Split pdf file into seperate files'''
+        """Split PDF file into seperate files"""
         if not output_path.exists():
             output_path.mkdir(parents=True)
 
