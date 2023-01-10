@@ -5,6 +5,7 @@ build-backend = "flit_core.buildapi"
 [project]
 name = "pagestream"
 authors = [{name = "Johan Schuijt", email = "johan@ftm.nl"}]
+readme = "README.md"
 license = {file = "LICENSE"}
 classifiers = ["License :: OSI Approved :: MIT License"]
 dynamic = ["version", "description"]
