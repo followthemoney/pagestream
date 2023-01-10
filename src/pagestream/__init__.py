@@ -1,5 +1,5 @@
 """
-Base module for handling PDF pagestreams with PikePDF and splitting them
+Handle PDF pagestreams with PikePDF and split them by outline
 """
 
 from re import search
