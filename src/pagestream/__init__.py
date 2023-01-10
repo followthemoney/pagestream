@@ -28,7 +28,10 @@ def is_valid_outlineitem(item: OutlineItem):
         # TODO - There's more valid actions than only `FitH`
         return item.action.get('/D').as_list()[1] == '/FitH'
 
-class PDFDocumentStream:
+"""
+Base class for wrapping a PDF page stream with PikePDF and splitting it
+"""
+class PDFPageStream:
     '''Represents a PDF file that consists of a stream of merged PDF documents'''
     def __init__(self, path: Path):
         self.pdf = Pdf.open(path)
