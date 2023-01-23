@@ -11,7 +11,7 @@ from pikepdf._qpdf import Pdf, Page
 from pikepdf.models.outlines import OutlineItem
 from itertools import tee, chain
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 
 # flatten function can recurse a lot, python limits this by default to not
 # cause overflows in the CPython implementation
