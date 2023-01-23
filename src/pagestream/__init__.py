@@ -67,11 +67,8 @@ class PDFPageStream:
 
         return True
 
-    def extract_to(self, output_path):
+    def extract(self):
         """Split PDF file into seperate files"""
-        if not output_path.exists():
-            output_path.mkdir(parents=True)
-
         items = self.get_outline_items()
         page_indexes = map(lambda i: Page(i.action.get('/D')[0]).index, items)
         titles = map(lambda i: i.title, items)
@@ -85,9 +82,25 @@ class PDFPageStream:
         for title, from_page, to_page in documents:
             # Create new PDF & append from src
             pdf = Pdf.new()
+            with pdf.open_metadata() as meta:
+                meta['dc:title'] = title
+
             for page in self.pdf.pages[from_page:to_page]:
                 pdf.pages.append(page)
+
+            yield pdf
+
+    def extract_to(self, output_path):
+        """Output split files into path"""
+        if not output_path.exists():
+            output_path.mkdir(parents=True)
+
+        for pdf in self.extract():
+            meta = pdf.open_metadata()
+            title = meta['dc:title']
 
             path = output_path.joinpath(title).with_suffix('.pdf')
             info(f'Extracting {title} to {path}')
             pdf.save(path)
+
+
