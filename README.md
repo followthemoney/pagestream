@@ -12,10 +12,7 @@ different functionality regarding these streams.
 
 Example usage:
 ```
-stream = PDFPageStream("/path/to.pdf")
-
-if stream.can_extract_by_outline():
-    stream.extract_to("/output/path")
+pagestream --help
 ```
 
 
