@@ -10,8 +10,12 @@ license = {file = "LICENSE"}
 classifiers = ["License :: OSI Approved :: MIT License"]
 dynamic = ["version", "description"]
 dependencies = [
-  'pikepdf'
+  'pikepdf',
+  'click'
 ]
 
 [project.urls]
 Home = "https://github.com/followthemoney/pagestream"
+
+[project.scripts]
+pagestream = "pagestream.cli:cli"
