@@ -6,7 +6,7 @@ from re import search
 from sys import setrecursionlimit
 from logging import info
 from pathlib import Path
-from pikepdf._qpdf import Pdf, Page, PageList
+from pikepdf._qpdf import Pdf, Page
 
 __version__ = "v0.2.0"
 
@@ -33,29 +33,28 @@ class PDFPageStream:
                 regex = "|".join(['Pagina\s?\d+', 'Page\s?\d+', '_Pagina_'])
                 is_literal_page = search(regex, str(title)) is not None
 
-                # Does this outline contain information about the targets?
-                has_count = item.get('/Count') is not None
-                if has_count:
-                    count = item.get('/Count')
-                else:
-                    count = 1
+                # Some outlines are broken and dont have destination set
+                destination = item.get('/A').get('/D')[0]
 
-                # Is this a outline that just contains "Page 1" etc. references?
-                is_single_page = count <= 1
-                if is_literal_page and is_single_page:
-                    continue
+                if destination is not None:
+                    # First page
+                    first = Page(destination).index
 
-                # Create new PDF & append from src
-                pdf = Pdf.new()
-                with pdf.open_metadata() as meta:
-                    meta['dc:title'] = str(title)
+                    # last page is either the destination of the next outline item, or the last page of the document
+                    next = self.pdf.pages[-1].index
+                    if item.get('/Next') is not None and item.get('/Next').get('/A').get('/D')[0] is not None:
+                        next = Page(item.get('/Next').get('/A').get('/D')[0]).index
 
-                next = item.get('/First')
-                while next is not None:
-                    pdf.pages.append(Page(next.get('/A').get('/D')[0]))
-                    next = next.get('/Next')
+                    count = (next - first)
 
-                yield pdf
+                    pdf = Pdf.new()
+                    with pdf.open_metadata() as meta:
+                        meta['dc:title'] = str(title)
+
+                    for page in self.pdf.pages[first:next]:
+                        pdf.pages.append(page)
+
+                    yield pdf
 
     def extract_to(self, output_path):
         """Output split files into path"""
