@@ -6,7 +6,7 @@ from re import search
 from sys import setrecursionlimit
 from logging import info
 from pathlib import Path
-from pikepdf._qpdf import Pdf, Page
+from pikepdf._qpdf import Pdf, Page, PageList
 
 __version__ = "v0.2.0"
 
@@ -32,7 +32,16 @@ class PDFPageStream:
                 # just named something like "page <x>", there's better ways to do this
                 regex = "|".join(['Pagina\s?\d+', 'Page\s?\d+', '_Pagina_'])
                 is_literal_page = search(regex, str(title)) is not None
-                is_single_page = item.get('/Count') is None
+
+                # Does this outline contain information about the targets?
+                has_count = item.get('/Count') is not None
+                if has_count:
+                    count = item.get('/Count')
+                else:
+                    count = 1
+
+                # Is this a outline that just contains "Page 1" etc. references?
+                is_single_page = count <= 1
                 if is_literal_page and is_single_page:
                     continue
 
@@ -41,13 +50,10 @@ class PDFPageStream:
                 with pdf.open_metadata() as meta:
                     meta['dc:title'] = str(title)
 
-                if not is_single_page:
-                    next = item.get('/First')
-                    while next is not None:
-                        pdf.pages.append(Page(next.get('/Dest')[0]))
-                        next = next.get('/Next')
-                else:
-                    pdf.pages.append(Page(item.get('/A').get('/D')[0]))
+                next = item.get('/First')
+                while next is not None:
+                    pdf.pages.append(Page(next.get('/A').get('/D')[0]))
+                    next = next.get('/Next')
 
                 yield pdf
 
