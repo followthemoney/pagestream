@@ -8,7 +8,7 @@ from logging import info
 from pathlib import Path
 from pikepdf._qpdf import Pdf, Page
 
-__version__ = "v0.2.0"
+__version__ = "v0.2.1"
 
 # flatten function can recurse a lot, python limits this by default to not
 # cause overflows in the CPython implementation
