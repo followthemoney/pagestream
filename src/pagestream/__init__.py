@@ -28,10 +28,6 @@ class PDFPageStream:
                 title = item.get('/Title')
                 if title is None:
                     continue
-                # TODO - Intent here is to not extract single pages that are
-                # just named something like "page <x>", there's better ways to do this
-                regex = "|".join(['Pagina\s?\d+', 'Page\s?\d+', '_Pagina_'])
-                is_literal_page = search(regex, str(title)) is not None
 
                 # Some outlines are broken and dont have destination set
                 destination = item.get('/A').get('/D')[0]
@@ -44,8 +40,6 @@ class PDFPageStream:
                     next = self.pdf.pages[-1].index
                     if item.get('/Next') is not None and item.get('/Next').get('/A').get('/D')[0] is not None:
                         next = Page(item.get('/Next').get('/A').get('/D')[0]).index
-
-                    count = (next - first)
 
                     pdf = Pdf.new()
                     with pdf.open_metadata() as meta:
