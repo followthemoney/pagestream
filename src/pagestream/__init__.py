@@ -4,11 +4,11 @@ Handle PDF pagestreams with PikePDF and split them by outline
 
 from re import search
 from sys import setrecursionlimit
-from logging import info
+from logging import info, debug
 from pathlib import Path
 from pikepdf._qpdf import Pdf, Page
 
-__version__ = "v0.2.2"
+__version__ = "v0.2.3"
 
 # flatten function can recurse a lot, python limits this by default to not
 # cause overflows in the CPython implementation
@@ -22,11 +22,16 @@ class PDFPageStream:
     @staticmethod
     def get_destination(item):
         if item.get('/Dest') is not None:
-            return item.get('/Dest')[0]
+            destination = item.get('/Dest')
         elif item.get('/A') is not None and item.get('/A').get('/D') is not None:
-            return item.get('/A').get('/D')[0]
+            destination = item.get('/A').get('/D')
         else:
             raise Exception('Outline item has no destination')
+
+        if destination[0] is None:
+            raise Exception('Outline item destination has invalid target')
+
+        return destination[0]
 
     def get_embedded_documents(self):
         with self.pdf.open_outline() as outline:
@@ -38,36 +43,48 @@ class PDFPageStream:
                 if title is None:
                     continue
 
-                destination = PDFPageStream.get_destination(item)
+                try:
+                    destination = PDFPageStream.get_destination(item)
+                except Exception as e:
+                    debug(e)
+                    continue
 
-                # Some outlines are broken and don't have destination target set
-                if destination is not None:
-                    # First page
-                    first = Page(destination).index
+                # First page
+                first = Page(destination).index
 
-                    # last page is either the destination of the next outline item, or the last page of the document
-                    next = len(self.pdf.pages)
+                # last page is either the destination of the next outline item, or the last page of the document
+                next = None
+                while next is None:
                     if item.get('/Next') is not None:
-                        next_destination = PDFPageStream.get_destination(item.get('/Next'))
-                        if next_destination is not None:
+                        # Only use target of next outline item if it's valid
+                        try:
+                            next_destination = PDFPageStream.get_destination(item.get('/Next'))
                             next = Page(next_destination).index
+                        except Exception as e:
+                            # If the target is invalid, try the target of the next outline item
+                            debug(e)
+                            item = item.get('/Next')
 
-                    # Is this just a "Page .." reference?
-                    regex = "|".join(['Pagina\s?\d+', 'Page\s?\d+', '_Pagina_'])
-                    is_literal_page = search(regex, str(title)) is not None
-                    is_single_page = next - first == 1
+                            continue
+                    else:
+                        next = len(self.pdf.pages)
 
-                    if is_literal_page and is_single_page:
-                        continue
+                # Is this just a "Page .." reference?
+                regex = "|".join(['Pagina\s?\d+', 'Page\s?\d+', '_Pagina_'])
+                is_literal_page = search(regex, str(title)) is not None
+                is_single_page = next - first == 1
 
-                    pdf = Pdf.new()
-                    with pdf.open_metadata() as meta:
-                        meta['dc:title'] = str(title)
+                if is_literal_page and is_single_page:
+                    continue
 
-                    for page in self.pdf.pages[first:next]:
-                        pdf.pages.append(page)
+                pdf = Pdf.new()
+                with pdf.open_metadata() as meta:
+                    meta['dc:title'] = str(title)
 
-                    yield pdf
+                for page in self.pdf.pages[first:next]:
+                    pdf.pages.append(page)
+
+                yield pdf
 
     def extract_to(self, output_path):
         """Output split files into path"""
