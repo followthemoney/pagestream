@@ -8,7 +8,7 @@ from logging import info
 from pathlib import Path
 from pikepdf._qpdf import Pdf, Page
 
-__version__ = "v0.2.1"
+__version__ = "v0.2.2"
 
 # flatten function can recurse a lot, python limits this by default to not
 # cause overflows in the CPython implementation
@@ -18,6 +18,15 @@ class PDFPageStream:
     """Represents a PDF file that consists of a stream of merged PDF documents"""
     def __init__(self, path: Path):
         self.pdf = Pdf.open(path)
+
+    @staticmethod
+    def get_destination(item):
+        if item.get('/Dest') is not None:
+            return item.get('/Dest')[0]
+        elif item.get('/A') is not None and item.get('/A').get('/D') is not None:
+            return item.get('/A').get('/D')[0]
+        else:
+            raise Exception('Outline item has no destination')
 
     def get_embedded_documents(self):
         with self.pdf.open_outline() as outline:
@@ -29,17 +38,27 @@ class PDFPageStream:
                 if title is None:
                     continue
 
-                # Some outlines are broken and dont have destination set
-                destination = item.get('/A').get('/D')[0]
+                destination = PDFPageStream.get_destination(item)
 
+                # Some outlines are broken and don't have destination target set
                 if destination is not None:
                     # First page
                     first = Page(destination).index
 
                     # last page is either the destination of the next outline item, or the last page of the document
-                    next = self.pdf.pages[-1].index
-                    if item.get('/Next') is not None and item.get('/Next').get('/A').get('/D')[0] is not None:
-                        next = Page(item.get('/Next').get('/A').get('/D')[0]).index
+                    next = len(self.pdf.pages)
+                    if item.get('/Next') is not None:
+                        next_destination = PDFPageStream.get_destination(item.get('/Next'))
+                        if next_destination is not None:
+                            next = Page(next_destination).index
+
+                    # Is this just a "Page .." reference?
+                    regex = "|".join(['Pagina\s?\d+', 'Page\s?\d+', '_Pagina_'])
+                    is_literal_page = search(regex, str(title)) is not None
+                    is_single_page = next - first == 1
+
+                    if is_literal_page and is_single_page:
+                        continue
 
                     pdf = Pdf.new()
                     with pdf.open_metadata() as meta:
