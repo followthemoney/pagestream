@@ -4,7 +4,7 @@ import sys
 import click
 from pathlib import Path
 import logging
-from __init__ import PDFPageStream
+from . import PDFPageStream
 
 @click.group(help="PDF pagestream utility")
 def cli() -> None:
