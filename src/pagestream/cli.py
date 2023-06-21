@@ -2,6 +2,7 @@
 
 import sys
 import click
+from pathlib import Path
 import logging
 from __init__ import PDFPageStream
 
@@ -16,8 +17,15 @@ def contents(filename):
     pagestream = PDFPageStream(filename)
     for pdf in pagestream.get_embedded_documents():
         with pdf.open_metadata() as meta:
-            print(meta['dc:title'])
-        print("- " + str(len(pdf.pages)) + " pages")
+            logging.info(meta['dc:title'])
+        logging.info("- " + str(len(pdf.pages)) + " pages")
+
+@cli.command("extract", help="Extract documents in pagestream to folder")
+@click.argument('filename', type=click.Path(exists=True))
+@click.argument('path', type=click.Path())
+def extract(filename, path):
+    pagestream = PDFPageStream(filename)
+    pagestream.extract_to(Path(path))
 
 if __name__ == "__main__":
     cli()

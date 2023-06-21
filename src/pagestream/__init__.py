@@ -86,17 +86,15 @@ class PDFPageStream:
 
                 yield pdf
 
-    def extract_to(self, output_path):
+    def extract_to(self, path: Path):
         """Output split files into path"""
-        if not output_path.exists():
-            output_path.mkdir(parents=True)
+        path.mkdir(parents=True, exist_ok=True)
 
         for pdf in self.get_embedded_documents():
             meta = pdf.open_metadata()
             title = meta['dc:title']
 
-            path = output_path.joinpath(title).with_suffix('.pdf')
-            info(f'Extracting {title} to {path}')
-            pdf.save(path)
+            info(f'Extracting {title}')
+            pdf.save(path.joinpath(title).with_suffix('.pdf'))
 
 
